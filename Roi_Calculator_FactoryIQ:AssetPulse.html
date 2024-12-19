@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROI Calculator - FactoryIQ</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8fafc;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            background-color: #0d47a1;
+            color: white;
+            width: 100%;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .step {
+            margin-bottom: 20px;
+        }
+
+        .step label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .step input, .step select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .step input[type="range"] {
+            width: 100%;
+        }
+
+        .step .tooltip {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .result {
+            margin-top: 40px;
+            padding: 20px;
+            background: #e3f2fd;
+            border: 2px solid #0d47a1;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .result h2 {
+            color: #0d47a1;
+        }
+
+        footer {
+            margin-top: auto;
+            padding: 10px;
+            background: #f8fafc;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        button {
+            padding: 12px 20px;
+            background-color: #0d47a1;
+            color: white;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0c398d;
+        }
+
+        .chart-container {
+            margin-top: 20px;
+            width: 100%;
+            height: 300px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>ROI Calculator - FactoryIQ</h1>
+    </header>
+
+    <div class="container">
+        <form id="roiCalculator">
+            <div class="step">
+                <label for="numAssets">Number of assets/machines currently managed</label>
+                <input type="number" id="numAssets" placeholder="Enter number of assets" required>
+            </div>
+
+            <div class="step">
+                <label for="avgOperatingHours">Average operating hours per period</label>
+                <input type="number" id="avgOperatingHours" placeholder="Enter hours" required>
+            </div>
+
+            <div class="step">
+                <label for="energyCost">Average energy cost per unit/time (€)</label>
+                <input type="number" id="energyCost" step="0.01" placeholder="Enter cost" required>
+            </div>
+
+            <div class="step">
+                <label for="downtimeHours">Current downtime hours per month</label>
+                <input type="number" id="downtimeHours" placeholder="Enter downtime hours" required>
+            </div>
+
+            <div class="step">
+                <label for="maintenanceCost">Maintenance cost per asset per month (€)</label>
+                <input type="number" id="maintenanceCost" placeholder="Enter maintenance cost" required>
+            </div>
+
+            <div class="step">
+                <label for="downtimeCost">Estimated cost per hour of downtime (€)</label>
+                <input type="number" id="downtimeCost" placeholder="Enter cost per hour" required>
+            </div>
+
+            <div class="step">
+                <label for="reductionDowntime">Desired reduction in downtime percentage</label>
+                <input type="range" id="reductionDowntime" min="0" max="100" value="20">
+                <span id="reductionDowntimeValue">20%</span>
+            </div>
+
+            <div class="step">
+                <label for="energyReduction">Target energy consumption reduction (%)</label>
+                <input type="range" id="energyReduction" min="0" max="100" value="15">
+                <span id="energyReductionValue">15%</span>
+            </div>
+
+            <div class="step">
+                <button type="submit">Calculate ROI</button>
+            </div>
+        </form>
+
+        <div id="result" class="result" style="display: none;">
+            <h2>ROI Result</h2>
+            <p id="roiValue"></p>
+            <div class="chart-container" id="chartContainer"></div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2024 FactoryIQ. All rights reserved.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.getElementById('roiCalculator').addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            const numAssets = parseInt(document.getElementById('numAssets').value);
+            const avgOperatingHours = parseFloat(document.getElementById('avgOperatingHours').value);
+            const energyCost = parseFloat(document.getElementById('energyCost').value);
+            const downtimeHours = parseFloat(document.getElementById('downtimeHours').value);
+            const maintenanceCost = parseFloat(document.getElementById('maintenanceCost').value);
+            const downtimeCost = parseFloat(document.getElementById('downtimeCost').value);
+            const reductionDowntime = parseFloat(document.getElementById('reductionDowntime').value);
+            const energyReduction = parseFloat(document.getElementById('energyReduction').value);
+
+            if (isNaN(numAssets) || isNaN(avgOperatingHours) || isNaN(energyCost) || isNaN(downtimeHours) || isNaN(maintenanceCost) || isNaN(downtimeCost)) {
+                alert('Please fill in all fields with valid numbers.');
+                return;
+            }
+
+            const downtimeSavings = (downtimeHours * (reductionDowntime / 100) * downtimeCost * numAssets).toFixed(2);
+            const energySavings = (energyCost * (energyReduction / 100) * avgOperatingHours * numAssets).toFixed(2);
+            const totalSavings = (parseFloat(downtimeSavings) + parseFloat(energySavings)).toFixed(2);
+
+            document.getElementById('roiValue').innerText = `Total annual savings: €${totalSavings}`;
+            document.getElementById('result').style.display = 'block';
+
+            const ctx = document.getElementById('chartContainer').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Downtime Savings', 'Energy Savings'],
+                    datasets: [{
+                        label: 'Savings (€)',
+                        data: [downtimeSavings, energySavings],
+                        backgroundColor: ['#0d47a1', '#42a5f5'],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: true },
+                        tooltip: { enabled: true }
+                    }
+                }
+            });
+        });
+
+        const reductionDowntimeInput = document.getElementById('reductionDowntime');
+        const energyReductionInput = document.getElementById('energyReduction');
+
+        reductionDowntimeInput.addEventListener('input', () => {
+            document.getElementById('reductionDowntimeValue').textContent = `${reductionDowntimeInput.value}%`;
+        });
+
+        energyReductionInput.addEventListener('input', () => {
+            document.getElementById('energyReductionValue').textContent = `${energyReductionInput.value}%`;
+        });
+    </script>
+</body>
+</html>
